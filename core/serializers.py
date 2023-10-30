@@ -1,6 +1,14 @@
+from uuid import uuid4
 from rest_framework import serializers
-from .models import HomeSlider, HomeBlock, Products, Categories, Collections, Gender
 
+from .models import *
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'phone', 'gender', 'first_name', 'last_name']
+        
 class HomeSliderSerializer(serializers.ModelSerializer):
     connection = serializers.BooleanField(default=True)
     class Meta:
@@ -38,3 +46,9 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Products
         fields = "__all__"
+
+
+class WishListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WishList
+        fields = '__all__'

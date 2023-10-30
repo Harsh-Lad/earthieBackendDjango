@@ -1,17 +1,14 @@
-from django.shortcuts import render
 from rest_framework.response import Response
+from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import User, HomeSlider, HomeBlock, Categories, Products, Collections, Gender
-from uuid import uuid4
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from .serializers import HomeSliderSerializer, HomeBlockSerializer, CategorySerializer, ProductSerializer, CollectionsSerializer
-from django.db.models import Q
-from rest_framework import serializers
+from .models import *
+from .serializers import *
+from uuid import uuid4
+import os
 
-
-# Create your views here.
 
 # customizing token claims
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -39,51 +36,114 @@ class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
 
+
+# helper function
+def create_log_file(file_path):
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as f:
+            f.write("")
+
+def write_to_log_file(file_path, message):
+    with open(file_path, "a") as f:
+        f.write(message + "\n")
+
+
+
 @api_view(('GET',))
-def home(req):
-    return Response('It works',status=status.HTTP_200_OK)
+def endpoints(req):
+    data = {
+        'Auth Endpoints' : {
+            'Register ':'/auth/register',
+            'Login ':'/auth/login',
+            'Verify Email ':'/auth/verifyEmail',
+            'Forgot Password ':'/auth/forgotpasswordEmail',
+            'Set New Password ':'/auth/setPassword',
+        },
 
-@api_view(('GET','POST'))
-def signupView(req):
-    if req.method == 'POST':
-        try:
-            data = req.data
-            name = data['name']
-            email = data['email']
-            phone = data['phone']
-            password = data['password']
-            gender = data['gender']
-            user = User.objects.filter(email=email)
-            if user:
-                return Response('User Already Exists! Please Login',status=status.HTTP_200_OK)
+        'General Purpose Endpoints':{
+            'Home Slider ':'/homeSlider',
+            'Home Block ':'/homeBlock',
+            'All products ':'/products',
+            'Specific Products ':'/products?id="id"',
+            'Specific Product Category ':'/products?category="tees"',
+            'All Collections ':'/collection',
+            'Specific Collection ':'/collection?name="cosmic"',
+            'New Arrivals ':'/newArrivals',
+            'Offers ':'/offers',
+            'Search ':'/search?query="car tees"',
+        },
 
-            else:
-                token = name+str(uuid4())+str(phone)
-                user = User.objects.create(first_name=name,email=email,phone=phone,token=token, gender=gender)
-                user.set_password(password)
-                user.save()
-                name = name.capitalize()
-                link = f"http://localhost:3000/verifyemail?token={token}"
-                msg_plain = render_to_string('activation.txt', {'name': name ,'verificationLink':link})
-                msg_html = render_to_string('activation.html', {'name': name,'verificationLink':link})
+        'Wishlist Endpoints' : {
+            'Add to Wishlist ':'/addToWishlist?id="69"',
+            'Remove from Wishlist ':'/removeFromWishlist?id="69"',
+            'Get the Wishlist ':'/getWishlist?id="120407"',
+        },
 
-                send_mail(
-                    "Verify your Email",
-                    msg_plain,
-                    "earthie@mggroupindia.in",
-                    [email],
-                    html_message=msg_html,
-                    fail_silently=False,
-                )
-                return Response('Registered Successfully! Please login',status=status.HTTP_200_OK)
+        'Cart Endpoints':{
+            'Add to Cart ':'/addToCart?id="69"',
+            'Remove from Wishlist ':'/removeFromCart?id="69"',
+            'Get the Cart ':'/getCart?id="120407"',
+        },
+
+        'User Related Endpoints' :{
+            'Fetch User Details ':'/getUserDetails',
+        }
+
+    }
+    return Response(data=data, status=status.HTTP_200_OK)
+
+@api_view(('POST',))
+def userRegister(req):
+    '''
+    {
+        "email":"harshplad1@gmail.com",
+        "password":"harshplad1@gmail.com",
+        "first_name":"harsh",
+        "last_name":"lad",
+        "phone":8969388360,
+        "gender":"male"
+    }
+    '''
+    serializer = UserSerializer(data=req.data)
+    if serializer.is_valid():
+        data = serializer.data
+        token = str(data['phone']) + str(uuid4())
+        print(data)
+        user = User.objects.create(email=data['email'], first_name=data['first_name'], last_name=data['last_name'], phone=data['phone'], gender=data['gender'], token=token)
         
-        except Exception as e:
-            print(e)
-    
-    return Response('Method not allowed',status=status.HTTP_200_OK)
-    
+        name = data['first_name']
+        link = f"http://localhost:3000/verifyemail?token={token}"
+        msg_plain = render_to_string('activation.txt', {'name': name.capitalize() ,'verificationLink':link})
+        msg_html = render_to_string('activation.html', {'name': name.capitalize(),'verificationLink':link})
+
+        try:
+            send_mail(
+                "Verify your Email",
+                msg_plain,
+                "dev@earthie.in",
+                [data['email']],
+                html_message=msg_html,
+                fail_silently=False,
+            )
+            user.set_password(data['password'])
+            user.save()
+
+        except Exception as e:            
+            create_log_file("log.txt")
+            import datetime
+            log = f"{str(datetime.datetime.now())} {e}" 
+            write_to_log_file("log.txt", log)
+
+        # Return the user data and auth token.
+        response_data = {
+            "data": 'User Registered Successfully! Check your mail for account activation'
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(('GET',))
-def verify(req):
+def verifyEmail(req):
     token = req.GET.get('token',None)
     if token:
         try:
@@ -98,28 +158,20 @@ def verify(req):
                 send_mail(
                     "Congratulations",
                     msg_plain,
-                    "earthie@mggroupindia.in",
+                    "dev@earthie.in",
                     [email],
                         html_message=msg_html,
                     fail_silently=False,
                 )
                 return Response('Congratulations! Email verified successfully',status=status.HTTP_200_OK)
             return Response('Email already verified',status=status.HTTP_200_OK)
-        except:
-            return Response('Invalid Url',status=status.HTTP_406_NOT_ACCEPTABLE)
+        except Exception as e:
+            create_log_file("log.txt")
+            import datetime
+            log = f"{str(datetime.datetime.now())} {e}" 
+            write_to_log_file("log.txt", log)
+            
     return Response('Invalid Url',status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(('GET',))
-def homeSlider(req):
-    slider = HomeSlider.objects.all()
-    serializer = HomeSliderSerializer(slider,many=True).data
-    return Response(data=serializer, status=status.HTTP_200_OK)
-
-@api_view(('GET',))
-def homeBlock(req):
-    slides = HomeBlock.objects.all()
-    serializer = HomeBlockSerializer(slides, many=True).data
-    return Response(data=serializer, status=status.HTTP_200_OK)
 
 @api_view(('POST',))
 def forgotpasswordEmail(req):
@@ -130,23 +182,25 @@ def forgotpasswordEmail(req):
             token = user.first_name+str(uuid4())+str(user.phone)+"forgot-password"
             user.token = token
             user.save()
-            link = f"http://127.0.0.1:8000/setPassword?token={token}"
+            link = f"http://127.0.0.1:8000/auth/setPassword?token={token}"
             msg_plain = render_to_string('changePassword.txt', {'name': user.first_name,'link':link})
             msg_html = render_to_string('changePassword.html', {'name': user.first_name,'link':link})
             send_mail(
                 "Change Password",
                 msg_plain,
-                "earthie@mggroupindia.in",
+                "dev@earthie.in",
                 [user.email],
                 html_message=msg_html,
                 fail_silently=False,
             )
             return Response('Email sent',status=status.HTTP_200_OK)
         except Exception as e:
-            return Response(f"User not found {e}", status=status.HTTP_200_OK)
+            create_log_file("log.txt")
+            import datetime
+            log = f"{str(datetime.datetime.now())} {e}" 
+            write_to_log_file("log.txt", log)
+            return Response('Something went Wrong', status=status.HTTP_502_BAD_GATEWAY)
     return Response("Method not allowed", status=status.HTTP_200_OK)
-        
-
 
 @api_view(('POST',))
 def setPassword(req):
@@ -163,71 +217,45 @@ def setPassword(req):
             send_mail(
                 "Password Changed Successfully",
                 msg_plain,
-                "earthie@mggroupindia.in",
+                "dev@earthie.in",
                 [user.email],
                 html_message=msg_html,
                 fail_silently=False,
             )
             return Response("Password Changed Successfully", status=status.HTTP_200_OK)
         except Exception as e:
+            create_log_file("log.txt")
+            import datetime
+            log = f"{str(datetime.datetime.now())} {e}" 
+            write_to_log_file("log.txt", log)
             return Response(f"Invalid Link {e}", status=status.HTTP_200_OK)
     return Response("Method not allowed", status=status.HTTP_200_OK)
 
+
+@api_view(('GET',))
+def homeSlider(req):
+    slider = HomeSlider.objects.all()
+    serializer = HomeSliderSerializer(slider,many=True).data
+    return Response(data=serializer, status=status.HTTP_200_OK)
+
+
+@api_view(('GET',))
+def homeBlock(req):
+    slides = HomeBlock.objects.all()
+    serializer = HomeBlockSerializer(slides, many=True).data
+    return Response(data=serializer, status=status.HTTP_200_OK)
+
 @api_view(('GET',))
 def products(req):
-    if req.GET.get('gender'):
-        gender = req.GET.get('gender')
-        gender = gender.lower()
-        if gender == 'male':
-            gender = Gender.objects.get(genderName='Male')
-            products = Products.objects.all()
-            products = products.filter(gender=gender.id)
-            serializer = ProductSerializer(products, many=True).data
-            return Response(data=serializer, status=status.HTTP_200_OK)
-        elif gender == 'female':   
-            gender = Gender.objects.get(genderName='Female')
-            products = Products.objects.all()
-            products = products.filter(gender=gender.id)
-            serializer = ProductSerializer(products, many=True).data
-            return Response(data=serializer, status=status.HTTP_200_OK)
-        else:
-            products = Products.objects.all()
-            serializer = ProductSerializer(products, many=True).data
-            return Response(data=serializer, status=status.HTTP_200_OK)
-    
-    if req.GET.get('date'):
-        date = req.GET.get('date')
-        date = date.lower()
-        if date == 'asc':
-            products = Products.objects.all()
-            products = products.order_by('dateUploaded')
-            serializer = ProductSerializer(products, many=True).data
-            return Response(data=serializer, status=status.HTTP_200_OK)
-        
-        elif date == 'desc':
-            products = Products.objects.all()
-            products = products.order_by('-dateUploaded')
-            serializer = ProductSerializer(products, many=True).data
-            return Response(data=serializer, status=status.HTTP_200_OK)
-        else:
-            products = Products.objects.all()
-            products = products.order_by('dateUploaded')
-            serializer = ProductSerializer(products, many=True).data
-            return Response(data=serializer, status=status.HTTP_200_OK)
-        
-    if req.GET.get('offer'):
-        offer = req.GET.get('offer')
-        offer = offer.lower()
-        if offer == 'true':
-            products = Products.objects.all()
-            products = products.filter(is_in_Offer=True)
-            serializer = ProductSerializer(products, many=True).data
-            return Response(data=serializer, status=status.HTTP_200_OK)
-        
     products = Products.objects.all()    
     serializer = ProductSerializer(products, many=True).data
     return Response(data=serializer, status=status.HTTP_200_OK)
 
+@api_view(('GET',))
+def collection(req):
+    allCollections = Collections.objects.all()
+    serializer = CollectionsSerializer(allCollections, many=True).data
+    return Response(data=serializer, status=status.HTTP_200_OK)
 
 @api_view(('GET',))
 def newArrivals(req):
@@ -236,21 +264,12 @@ def newArrivals(req):
     serializer = ProductSerializer(products, many=True).data
     return Response(data=serializer, status=status.HTTP_200_OK)
 
-
 @api_view(('GET',))
 def offers(req):
     products = Products.objects.all()
     products = products.filter(is_in_Offer=True)
     serializer = ProductSerializer(products, many=True).data
     return Response(data=serializer, status=status.HTTP_200_OK)
-
-
-@api_view(('GET',))
-def collections(req):
-    allCollections = Collections.objects.all()
-    serializer = CollectionsSerializer(allCollections, many=True).data
-    return Response(data=serializer, status=status.HTTP_200_OK)
-
 
 
 @api_view(('GET',))
@@ -268,7 +287,61 @@ def search(req):
         return Response(data=serializer, status=status.HTTP_200_OK)
     except:
         return Response({'data':'No products found. Please try again later'}, status=status.HTTP_200_OK)
+
+@api_view(('POST',))
+def addToWishList(req):
+    user = req.user
+    product_id = req.data.get('product_id')
+
+    try:
+        product = Products.objects.get(id=product_id)
+    except Products.DoesNotExist:
+        return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Check if the product is already in the user's wishlist
+    if WishList.objects.filter(user=user, product=product).exists():
+        return Response({"error": "Product is already in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create a new entry in the user's wishlist
+    wish_list_item = WishList(user=user, product=product)
+    wish_list_item.save()
+
+    return Response({"message": "Product added to wishlist"}, status=status.HTTP_201_CREATED)
+
+@api_view(('POST',))
+def removeFromWishList(req):
+    product_id = req.data.get('product_id')
+
+    user = req.user
+
+    try:
+        product = Products.objects.get(id=product_id)
+    except Products.DoesNotExist:
+        return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        wish_list_item = WishList.objects.get(user=user, product=product)
+        wish_list_item.delete()
+        return Response({"message": "Product removed from wishlist"}, status=status.HTTP_200_OK)
+    except WishList.DoesNotExist:
+        return Response({"error": "Product is not in the wishlist"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(('GET',))
+def getWishList(req):
+    user = req.user
+    wishlist_items = WishList.objects.filter(user=user)
+    serializer = WishListSerializer(wishlist_items, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def addToCart(req):
+    ...
     
+def removeFromCart(req):
+    ...
 
+def getCart(req):
+    ...
 
-
+def getUserDetails(req):
+    ...

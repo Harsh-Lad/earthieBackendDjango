@@ -20,12 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0%63@rlo24*g9d^iab+zoy())=nqs-2a1aruljb*7fv!&orlxn'
+SECRET_KEY = 'django-insecure-yxrs5q-c@ai+e@q&8vnx*f1x*5-rg8zv@2ausg(15hi_+^z#2a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['api.earthie.in', '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -44,7 +44,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -124,27 +123,14 @@ import os
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/') # 'data' is my media folder
 STATIC_URL = '/static/'
 
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (      
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
-}
-
-# using custom user model
 AUTH_USER_MODEL = 'core.User'
 
 
 EMAIL_USE_SSL = True
-EMAIL_HOST = 'smtp.hostinger.com'
+EMAIL_HOST = 'earthie.in'
 EMAIL_PORT = 465
-EMAIL_HOST_USER = 'earthie@mggroupindia.in'
-EMAIL_HOST_PASSWORD = 'E@rthie@mai1'
+EMAIL_HOST_USER = 'dev@earthie.in'
+EMAIL_HOST_PASSWORD = 'hj@120407'
 
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/') # 'data' is my media folder
@@ -154,5 +140,10 @@ MEDIA_URL = '/media/'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://192.168.0.10:3000",
 ]
+
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
