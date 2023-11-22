@@ -8,7 +8,12 @@ from .models import *
 from .serializers import *
 from uuid import uuid4
 import os
-
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework_simplejwt.authentication import JWTAuthentication
+import razorpay
+import environ
 
 # customizing token claims
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -345,3 +350,46 @@ def getCart(req):
 
 def getUserDetails(req):
     ...
+
+
+from environ import *
+
+env = Env()
+
+# Load the environment variables from a file, if needed
+env.read_env()
+
+@api_view(('POST',))
+@authentication_classes([JWTAuthentication])  # Replace YourAuthenticationClass with the authentication class you are using
+@permission_classes([IsAuthenticated])
+@login_required
+def createROrder(req):
+    user = req.user  # This will give you the user associated with the JWT token
+    user_first_name = user.first_name
+    user_email = user.email
+    # client = razorpay.Client(auth=(env('RAZORPAY_KEY'), env('RAZORPAY_SECRET')))
+    client = razorpay.Client(auth=('rzp_test_A7ZnbCYmaYhcX1', 'x7OmwQHB0iyoKoK0lPghL183'))
+    amount = int(req.POST['amount']) * 100
+
+    DATA = {
+    "amount": amount,
+    "currency": "INR",
+    "receipt": F"{str(uuid4())}",
+    "notes": {
+        "username": user.first_name,  # Assuming the username is a field in your User model
+        "email": user.email
+        }
+    }
+    razorpay_order  = client.order.create(data=DATA)
+
+    RazorpayOrders.objects.create(
+        user=user,
+        order_id=razorpay_order['id'],
+        amount=amount,
+        currency=razorpay_order['currency'],
+        receipt=razorpay_order['receipt'],
+        user_first_name=user_first_name,
+        user_email=user_email
+    )
+
+    return Response(data=razorpay_order , status=status.HTTP_200_OK)

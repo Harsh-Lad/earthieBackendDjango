@@ -126,3 +126,17 @@ class WishList(models.Model):
 
 
 
+
+# payment models
+class RazorpayOrders(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order_id = models.CharField(max_length=255)
+    amount = models.IntegerField()
+    currency = models.CharField(max_length=3)
+    receipt = models.CharField(max_length=255)
+    user_first_name = models.CharField(max_length=255)
+    user_email = models.EmailField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Order {self.order_id} for {self.user_first_name}"

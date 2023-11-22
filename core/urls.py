@@ -10,7 +10,7 @@ urlpatterns = [
     
     # authentication related endpoints
     path('auth/register/', views.userRegister, name="userRegister"),
-    path('auth/login', MyTokenObtainPairView.as_view(), name="login"),
+    path('auth/login/', MyTokenObtainPairView.as_view(), name="login"),
     path('auth/login/refresh', TokenRefreshView.as_view(), name="token_refresh"),
     path('auth/verifyEmail', views.verifyEmail, name="endpoints"),
     path('auth/forgotpasswordEmail/', views.forgotpasswordEmail, name="forgotpasswordEmail"),
@@ -37,6 +37,10 @@ urlpatterns = [
 
     # user realed endpoints
     path('getUserDetails/', views.getUserDetails, name="getUserDetails"),
+
+      # payment endpoints
+    path('createROrder/', views.createROrder, name="createROrder"),
+
 
 
 ]

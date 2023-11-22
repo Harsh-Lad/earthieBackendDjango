@@ -1,6 +1,9 @@
-./env
-./media
-./static
+env
+.env
+media
+static
+
 
 
 ./db.sqlite3
+
