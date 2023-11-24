@@ -14,6 +14,8 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import razorpay
 import environ
+from django.views.decorators.csrf import csrf_exempt
+
 
 # customizing token claims
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -252,12 +254,23 @@ def homeBlock(req):
 
 @api_view(('GET',))
 def products(req):
+    if req.GET.get('id'):
+        id = req.GET.get('id')
+        products = Products.objects.filter(id=id)
+        serializer = ProductSerializer(products, many=True).data
+        return Response(data=serializer, status=status.HTTP_200_OK)
     products = Products.objects.all()    
     serializer = ProductSerializer(products, many=True).data
     return Response(data=serializer, status=status.HTTP_200_OK)
 
 @api_view(('GET',))
 def collection(req):
+    if req.GET.get('id'):
+        id = req.GET.get('id')
+        collection = Collections.objects.get(id=id)
+        products = Products.objects.filter(collections=collection)
+        serializer = ProductSerializer(products, many=True).data
+        return Response(data=serializer, status=status.HTTP_200_OK)
     allCollections = Collections.objects.all()
     serializer = CollectionsSerializer(allCollections, many=True).data
     return Response(data=serializer, status=status.HTTP_200_OK)
