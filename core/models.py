@@ -4,7 +4,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 
 class UserManager(BaseUserManager):
     """Define a model manager for User model with no username field."""
@@ -116,15 +117,53 @@ class Products(models.Model):
     def __str__(self):
         return self.productName
     
-
-class WishList(models.Model):
+    
+class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    product = models.ForeignKey(Products, on_delete=models.CASCADE)
+    total = models.IntegerField(default=0)  # Add a total field to store the cart total
+    num_items = models.IntegerField(default=0)  # Add a num_items field to store the total number of unique products in the cart
+
+    def update_total(self):
+        cart_items = CartItems.objects.filter(cart=self)
+        total = sum(item.product.offerPrice if item.product.is_in_Offer else item.product.productPrice for item in cart_items)
+        self.total = total
+        self.num_items = cart_items.count()  # Update the num_items field based on the count of unique products
+        self.save()
 
     def __str__(self):
-        return f"{self.user.first_name}'s Wishlist"
+        return f"{self.user.first_name}'s cart"
 
+class CartItems(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
+    product = models.ForeignKey(Products, on_delete=models.CASCADE)
 
+# Signal to update the total when a CartItem is saved or deleted
+@receiver(post_save, sender=CartItems)
+@receiver(post_delete, sender=CartItems)
+def update_cart_total(sender, instance, **kwargs):
+    instance.cart.update_total()
+
+class Wishlist(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    num_items = models.IntegerField(default=0)  # Add a num_items field to store the total number of unique products in the wishlist
+
+    def update_total(self):
+        wishlist_items = WishlistItems.objects.filter(wishlist=self)
+        self.num_items = wishlist_items.count()  # Update the num_items field based on the count of unique products
+        self.save()
+
+    def __str__(self):
+        return f"{self.user.first_name}'s wishlist"
+
+class WishlistItems(models.Model):
+    wishlist = models.ForeignKey(Wishlist, on_delete=models.CASCADE)
+    product = models.ForeignKey(Products, on_delete=models.CASCADE)
+
+# Signal to update the total when a WishlistItem is saved or deleted
+@receiver(post_save, sender=WishlistItems)
+@receiver(post_delete, sender=WishlistItems)
+def update_wishlist_total(sender, instance, **kwargs):
+    instance.wishlist.update_total()
 
 
 # payment models

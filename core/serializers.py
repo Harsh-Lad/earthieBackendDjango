@@ -49,6 +49,28 @@ class ProductSerializer(serializers.ModelSerializer):
 
 
 class WishListSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
     class Meta:
-        model = WishList
+        model = Wishlist
+        fields = '__all__'
+
+class WishListItemsSerializer(serializers.ModelSerializer):
+    product = ProductSerializer() 
+    wishlist = WishListSerializer()
+    class Meta:
+        model = WishlistItems
+        fields = '__all__'
+
+
+class CartSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+    class Meta:
+        model = Cart
+        fields = '__all__'
+
+class CartItemsSerializer(serializers.ModelSerializer):
+    product = ProductSerializer() 
+    cart = CartSerializer()
+    class Meta:
+        model = CartItems
         fields = '__all__'
